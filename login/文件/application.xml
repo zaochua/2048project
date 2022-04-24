@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+http://www.springframework.org/schema/beans/spring-beans.xsd
+http://www.springframework.org/schema/context
+http://www.springframework.org/schema/context/spring-context.xsd
+http://www.springframework.org/schema/aop
+http://www.springframework.org/schema/aop/spring-aop.xsd
+http://www.springframework.org/schema/tx
+http://www.springframework.org/schema/tx/spring-tx.xsd">
+    <!-- 增加注解扫描配置-->
+    <context:component-scan base-package="com.zsl"/>
+    <!-- 1、获取数据源-->
+    <!-- 读取配置文件-->
+    <bean id="configurerSupport" class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+        <property name="locations" value="classpath*:jdbc.properties"/>
+    </bean>
+    <!-- 1、配置数据源-->
+    <bean id="dataSource" class="com.alibaba.druid.pool.DruidDataSource">
+        <property name="driverClassName" value="${jdbc.driver}"/>
+        <property name="url" value="${jdbc.url}"/>
+        <property name="username" value="${jdbc.user}"/>
+        <property name="password" value="${jdbc.password}"/>
+    </bean>
+    <!-- 2、配置事务管理类-->
+    <bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        <property name="dataSource" ref="dataSource"/>
+    </bean>
+    <!-- 3、配置事务属性-->
+    <!-- Spring AOP 配置事务管理-->
+    <aop:config>
+        <aop:pointcut id="mypointcut" expression="execution(* com.zsl.service..*.*(..))"/>
+        <!-- 适配器-->
+        <aop:advisor advice-ref="myadvice" pointcut-ref="mypointcut"/>
+    </aop:config>
+    <!-- 配置事务相关属性-->
+    <tx:advice id="myadvice" transaction-manager="transactionManager">
+        <!-- 配置事务的隔离级别  ，只读属性等-->
+        <tx:attributes>
+            <!-- 默认对该service层所有方法增加事务-->
+            <tx:method name="*" propagation="REQUIRED" isolation="DEFAULT" />
+            <!-- 以get方法开头的 不能有事务-->
+            <tx:method name="get*" read-only="true"/>
+            <tx:method name="list*" read-only="true"/>
+            <tx:method name="is*" read-only="true"/>
+            <tx:method name="select*" read-only="true"/>
+        </tx:attributes>
+    </tx:advice>
+    <!-- 4、配置 SqlSessionFactory实现类  来自MyBatis-spring的插件 -->
+    <bean id="sessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+        <property name="dataSource" ref="dataSource"/>
+        <!-- 定义实体类 包的别名-->
+        <property name="typeAliasesPackage" value="com.zsl.entity"/>
+        <!-- 自动扫描mybatis配置文件 -->
+        <property name="configLocation" value="classpath:mybatis-config.xml"></property>
+
+        <!-- 引入MyBaits的配置文件， 现在省略-->
+        <!--<property name="configLocation" value="classpath*:config.xml"/>-->
+<!--        <property name="mapperLocations" value="classpath*:mapper/*.xml"/>-->
+<!--        <property name="p"-->
+    </bean>
+    <!-- 5、生成mapper对应的 代理类   自动根据该扫描方式 生成mapper的代理类-->
+    <bean id="mapperScanner" class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+        <property name="sqlSessionFactoryBeanName" value="sessionFactory"/>
+        <property name="basePackage" value="com.zsl.mapper"/>
+    </bean>
+    <!--&lt;!&ndash; 导入其他模块的application-service&ndash;&gt;-->
+    <!--<import resource="application-service.xml"/>-->
+
+</beans>
